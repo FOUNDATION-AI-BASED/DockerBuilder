@@ -1,3 +1,4 @@
+![Dark mode preview](https://raw.githubusercontent.com/FOUNDATION-AI-BASED/DockerBuilder/refs/heads/main/release-images/dockerbuilder-v1.2.png)
 # DockerBuilder 🐋
 
 DockerBuilder is an intelligent project containerization assistant that automatically analyzes your projects and generates optimized Docker configurations. It helps developers quickly containerize their applications without manual Dockerfile creation.

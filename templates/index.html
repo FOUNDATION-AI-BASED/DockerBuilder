@@ -22,9 +22,10 @@
         }
         
         .docker-whale {
-            position: fixed;
-            bottom: 20px;
+            position: absolute;
+            top: 50%;
             right: 20px;
+            transform: translateY(-50%);
             font-size: 48px;
             color: var(--primary-color);
             animation: float 3s ease-in-out infinite;
@@ -156,11 +157,48 @@
             font-size: 0.9em;
             color: #666;
         }
+        
+        .arrow-icon {
+            display: inline-block;
+            margin-left: 8px;
+            transition: transform 0.3s ease;
+        }
+        
+        .arrow-icon.up {
+            transform: rotate(180deg);
+        }
+        
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            text-align: center;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer a:hover {
+            color: var(--secondary-color);
+        }
     </style>
 </head>
 <body>
     <div class="container py-5">
-        <h1 class="text-center mb-4">DockerBuilder</h1>
+        <h1 class="text-center mb-4 position-relative">
+            DockerBuilder
+            <div class="docker-whale" id="dockerWhale" title="DockerBuilder">
+                <i class="fab fa-docker"></i>
+            </div>
+        </h1>
         <h2 class="text-center mb-4">Smart Project Containerization</h2>
         
         <div class="row justify-content-center">
@@ -214,7 +252,10 @@
                             </div>
                             
                             <div class="advanced-options mb-3" id="advancedOptions">
-                                <h5>Advanced Options</h5>
+                                <h5>
+                                    Advanced Options
+                                    <i class="fas fa-chevron-down arrow-icon" id="arrowIcon"></i>
+                                </h5>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" id="optimizeImages" checked>
                                     <label class="form-check-label" for="optimizeImages">Optimize Docker Images</label>
@@ -244,8 +285,9 @@
         </div>
     </div>
 
-    <div class="docker-whale" id="dockerWhale" title="DockerBuilder">
-        <i class="fab fa-docker"></i>
+    <div class="footer">
+        Developed by <a href="https://github.com/FOUNDATION-AI-BASED" target="_blank">FOUNDATION-AI-BASED</a>
+        <span class="version">V1.4</span>
     </div>
 
     <script>
@@ -309,7 +351,9 @@
         // Add click handler for advanced options
         document.getElementById('dockerWhale').addEventListener('click', function() {
             const advancedOptions = document.getElementById('advancedOptions');
+            const arrowIcon = document.getElementById('arrowIcon');
             advancedOptions.classList.toggle('active');
+            arrowIcon.classList.toggle('up');
         });
         
         // Update file handling to include structure analysis

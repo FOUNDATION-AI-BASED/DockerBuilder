@@ -1,4 +1,4 @@
-### !!! Early Development Stage !!! ###
+# !!! Early Development Stage !!! #
 # DockerBuilder 🐋
 
 DockerBuilder is an intelligent project containerization assistant that automatically analyzes your projects and generates optimized Docker configurations. It helps developers quickly containerize their applications without manual Dockerfile creation.

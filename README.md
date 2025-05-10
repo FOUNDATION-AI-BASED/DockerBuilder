@@ -20,14 +20,6 @@ This project is developed and maintained by [FOUNDATION-AI-BASED](https://github
 
 ## 🧪 Tested Project Types
 
-
-### Example Tested Projects
-- Simple Django blog application
-- Flask REST API with SQLAlchemy
-- Express.js microservice with MongoDB
-- React single-page application
-- Next.js e-commerce site
-
 ## ⚠️ Untested Project Types
 
 ### Python

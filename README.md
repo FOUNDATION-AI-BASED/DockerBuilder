@@ -1,15 +1,70 @@
-# DockerBuilder 🐳
+# DockerBuilder 🐋
 
 DockerBuilder is an intelligent project containerization assistant that automatically analyzes your projects and generates optimized Docker configurations. It helps developers quickly containerize their applications without manual Dockerfile creation.
+
+## 👨‍💻 Developer
+
+This project is developed and maintained by [FOUNDATION-AI-BASED](https://github.com/FOUNDATION-AI-BASED), a developer focused on simplifying tools with modern UIs.
 
 ## 🌟 Features
 
 - **Smart Project Analysis**: Automatically detects project type, dependencies, and requirements
+- **Intelligent Path Detection**: Automatically finds the correct project root directory
 - **Docker Configuration Generation**: Creates optimized Dockerfile and docker-compose.yml files
 - **Multiple Output Formats**: Export configurations as ZIP or TAR archives
 - **Web Interface**: User-friendly web UI for easy project upload and configuration
 - **Customizable**: Fine-tune generated configurations to match your needs
 - **Language Support**: Supports multiple programming languages and frameworks
+- **macOS Compatibility**: Automatically removes _MACOS folders from uploaded projects
+
+## 🧪 Tested Project Types
+
+### Python Projects
+- ✅ Django (tested with Django 3.2, 4.0)
+- ✅ Flask (tested with Flask 2.0, 2.1)
+- ✅ FastAPI (tested with FastAPI 0.68, 0.70)
+
+### Node.js Projects
+- ✅ Express.js (tested with Express 4.17, 4.18)
+- ✅ React (tested with Create React App)
+- ✅ Next.js (tested with Next.js 12, 13)
+
+### Example Tested Projects
+- Simple Django blog application
+- Flask REST API with SQLAlchemy
+- Express.js microservice with MongoDB
+- React single-page application
+- Next.js e-commerce site
+
+## ⚠️ Untested Project Types
+
+### Python
+- ❌ Pyramid
+- ❌ Tornado
+- ❌ Sanic
+- ❌ Complex Django applications with custom middleware
+- ❌ Projects with multiple Python versions
+
+### Node.js
+- ❌ NestJS
+- ❌ Nuxt.js
+- ❌ Vue.js with custom configurations
+- ❌ Complex monorepo structures
+- ❌ Projects with multiple Node.js versions
+
+### Other Languages
+- ❌ Java Spring Boot
+- ❌ Ruby on Rails
+- ❌ PHP Laravel
+- ❌ Go applications
+- ❌ Rust applications
+
+### Complex Scenarios
+- ❌ Microservices architectures
+- ❌ Multi-container applications
+- ❌ Projects with custom build processes
+- ❌ Projects requiring specific system dependencies
+- ❌ Projects with complex environment configurations
 
 ## 🚀 Quick Start
 
@@ -77,5 +132,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Thanks to all contributors who have helped shape this project
-- Inspired by the need for automated containerization solutions 
+- Docker for the amazing containerization platform
+- All contributors who have helped improve this project 

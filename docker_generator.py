@@ -58,13 +58,17 @@ class DockerGenerator:
     
     def _generate_dockerfile(self, output_path: str, host: str, port: str):
         """Generate Dockerfile based on project type and framework."""
-        project_type = self.analysis.get('language', 'unknown')
-        framework = self._detect_framework()
-        dependencies = self.analysis.get('dependencies', [])
-        
         dockerfile_content = []
+        project_type = self.analysis.get('type', 'unknown')
+        framework = self.analysis.get('framework', 'unknown')
         
-        # Base image selection and setup
+        # Common environment variables
+        dockerfile_content.extend([
+            f'ENV HOST={host}',
+            f'ENV PORT={port}',
+            f'EXPOSE {port}'
+        ])
+        
         if project_type == 'python':
             dockerfile_content.extend([
                 'FROM python:3.9-slim',
@@ -72,38 +76,29 @@ class DockerGenerator:
                 '',
                 '# Install system dependencies',
                 'RUN apt-get update && apt-get install -y \\',
-                '    build-essential \\',
-                '    libpq-dev \\',
+                '    libmagic1 \\',
                 '    && rm -rf /var/lib/apt/lists/*',
                 '',
-                '# Install Python dependencies',
+                '# Copy requirements first to leverage Docker cache',
                 'COPY requirements.txt .',
                 'RUN pip install --no-cache-dir -r requirements.txt',
                 '',
                 '# Copy project files',
                 'COPY . .',
                 '',
+                '# Set proper permissions',
+                'RUN chown -R nobody:nogroup /app',
+                '',
+                '# Switch to non-root user',
+                'USER nobody',
+                '',
                 f'ENV HOST={host}',
                 f'ENV PORT={port}',
                 f'EXPOSE {port}',
+                '',
+                '# Run the application with the specified port',
+                f'CMD ["gunicorn", "--bind", "{host}:{port}", "--workers", "4", "--timeout", "120", "app:app"]'
             ])
-            
-            # Framework-specific commands
-            if framework == 'django':
-                dockerfile_content.extend([
-                    'RUN python manage.py collectstatic --noinput',
-                    'CMD ["gunicorn", "--bind", "0.0.0.0:${PORT}", "--workers", "4", "project.wsgi:application"]'
-                ])
-            elif framework == 'flask':
-                dockerfile_content.extend([
-                    'CMD ["gunicorn", "--bind", "0.0.0.0:${PORT}", "--workers", "4", "app:app"]'
-                ])
-            elif framework == 'fastapi':
-                dockerfile_content.extend([
-                    'CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${PORT}", "--workers", "4"]'
-                ])
-            else:
-                dockerfile_content.append('CMD ["python", "app.py"]')
         
         elif project_type == 'javascript':
             dockerfile_content.extend([
@@ -126,24 +121,24 @@ class DockerGenerator:
             if framework == 'nextjs':
                 dockerfile_content.extend([
                     'RUN npm run build',
-                    'CMD ["npm", "start"]'
+                    f'CMD ["npm", "start", "--", "-p", "{port}"]'
                 ])
             elif framework == 'react':
                 dockerfile_content.extend([
                     'RUN npm run build',
-                    'CMD ["npm", "start"]'
+                    f'CMD ["npm", "start", "--", "-p", "{port}"]'
                 ])
             elif framework == 'vue':
                 dockerfile_content.extend([
                     'RUN npm run build',
-                    'CMD ["npm", "run", "serve"]'
+                    f'CMD ["npm", "run", "serve", "--", "--port", "{port}"]'
                 ])
             elif framework == 'express':
                 dockerfile_content.extend([
-                    'CMD ["node", "app.js"]'
+                    f'CMD ["node", "app.js", "--port", "{port}"]'
                 ])
             else:
-                dockerfile_content.append('CMD ["npm", "start"]')
+                dockerfile_content.append(f'CMD ["npm", "start", "--", "-p", "{port}"]')
         
         else:
             # Generic Dockerfile for unknown project types
@@ -154,7 +149,7 @@ class DockerGenerator:
                 f'ENV HOST={host}',
                 f'ENV PORT={port}',
                 f'EXPOSE {port}',
-                'CMD ["echo", "Please customize this Dockerfile for your project"]'
+                f'CMD ["echo", "Please customize this Dockerfile for your project"]'
             ])
         
         # Write Dockerfile
@@ -162,50 +157,33 @@ class DockerGenerator:
             f.write('\n'.join(dockerfile_content))
     
     def _generate_compose(self, output_path: str, host: str, port: str):
-        """Generate docker-compose.yml file."""
-        project_type = self.analysis.get('language', 'unknown')
-        framework = self._detect_framework()
+        """Generate docker-compose.yml with proper port mapping."""
+        compose_content = [
+            'version: \'3.8\'',
+            '',
+            'services:',
+            '  app:',
+            '    build: .',
+            f'    ports:',
+            f'      - "{port}:{port}"',
+            '    environment:',
+            '      - PYTHONUNBUFFERED=1',
+            f'      - PORT={port}',
+            f'      - HOST={host}',
+            '    volumes:',
+            '      - ./uploads:/app/uploads',
+            '      - ./output:/app/output',
+            '      - ./extracted:/app/extracted',
+            '    networks:',
+            '      - app-network',
+            '',
+            'networks:',
+            '  app-network:',
+            '    driver: bridge'
+        ]
         
-        compose_config = {
-            'version': '3.8',
-            'services': {
-                'app': {
-                    'build': '.',
-                    'ports': [f"{port}:{port}"],
-                    'environment': {
-                        'HOST': host,
-                        'PORT': port
-                    },
-                    'volumes': ['./:/app'],
-                    'networks': ['app-network']
-                }
-            },
-            'networks': {
-                'app-network': {
-                    'driver': 'bridge'
-                }
-            }
-        }
-        
-        # Add database services if needed
-        if framework in ['django', 'flask', 'fastapi']:
-            compose_config['services']['db'] = {
-                'image': 'postgres:13',
-                'environment': {
-                    'POSTGRES_DB': 'app',
-                    'POSTGRES_USER': 'app',
-                    'POSTGRES_PASSWORD': 'app'
-                },
-                'volumes': ['postgres_data:/var/lib/postgresql/data'],
-                'networks': ['app-network']
-            }
-            compose_config['volumes'] = {
-                'postgres_data': {}
-            }
-        
-        # Write docker-compose.yml
         with open(output_path, 'w') as f:
-            yaml.dump(compose_config, f, default_flow_style=False)
+            f.write('\n'.join(compose_content))
     
     def _generate_dockerignore(self, output_path: str):
         """Generate .dockerignore file."""

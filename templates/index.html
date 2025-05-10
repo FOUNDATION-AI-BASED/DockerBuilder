@@ -23,16 +23,22 @@
         
         .docker-whale {
             position: fixed;
-            top: 20px;
+            bottom: 20px;
             right: 20px;
             font-size: 48px;
             color: var(--primary-color);
             animation: float 3s ease-in-out infinite;
-            z-index: 1000;
+            z-index: 1;
             background: rgba(255, 255, 255, 0.9);
-            padding: 10px;
+            padding: 15px;
             border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .docker-whale:hover {
+            transform: scale(1.1);
         }
         
         @keyframes float {
@@ -91,13 +97,69 @@
             background-color: var(--secondary-color);
             border-color: var(--secondary-color);
         }
+        
+        .project-structure {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .project-structure.active {
+            display: block;
+        }
+        
+        .structure-tree {
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        
+        .structure-tree .folder {
+            color: var(--primary-color);
+        }
+        
+        .structure-tree .file {
+            color: #666;
+        }
+        
+        .structure-tree .size {
+            color: #999;
+            font-size: 0.9em;
+        }
+        
+        .advanced-options {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .advanced-options.active {
+            display: block;
+        }
+        
+        .progress-container {
+            margin-top: 20px;
+        }
+        
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+        }
+        
+        .status-message {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <div class="container py-5">
-        <div class="docker-whale">
-            <i class="fab fa-docker"></i>
-        </div>
         <h1 class="text-center mb-4">DockerBuilder</h1>
         <h2 class="text-center mb-4">Smart Project Containerization</h2>
         
@@ -146,6 +208,27 @@
                                 <input type="file" id="fileInput" class="d-none" accept=".zip,.tar,.tar.gz,.tgz">
                             </div>
                             
+                            <div class="project-structure mb-3" id="projectStructure">
+                                <h5>Project Structure</h5>
+                                <div class="structure-tree" id="structureTree"></div>
+                            </div>
+                            
+                            <div class="advanced-options mb-3" id="advancedOptions">
+                                <h5>Advanced Options</h5>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="optimizeImages" checked>
+                                    <label class="form-check-label" for="optimizeImages">Optimize Docker Images</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="multiStage" checked>
+                                    <label class="form-check-label" for="multiStage">Use Multi-stage Builds</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="securityScan" checked>
+                                    <label class="form-check-label" for="securityScan">Enable Security Scanning</label>
+                                </div>
+                            </div>
+                            
                             <div class="loading mb-3">
                                 <div class="progress">
                                     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
@@ -159,6 +242,10 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="docker-whale" id="dockerWhale" title="DockerBuilder">
+        <i class="fab fa-docker"></i>
     </div>
 
     <script>
@@ -208,15 +295,45 @@
             handleFiles({ target: { files: files } });
         }
 
+        // Add new functionality for project structure display
+        function displayProjectStructure(structure) {
+            const structureTree = document.getElementById('structureTree');
+            const projectStructure = document.getElementById('projectStructure');
+            
+            if (structure) {
+                structureTree.innerHTML = structure;
+                projectStructure.classList.add('active');
+            }
+        }
+        
+        // Add click handler for advanced options
+        document.getElementById('dockerWhale').addEventListener('click', function() {
+            const advancedOptions = document.getElementById('advancedOptions');
+            advancedOptions.classList.toggle('active');
+        });
+        
+        // Update file handling to include structure analysis
         function handleFiles(e) {
             const file = e.target.files[0];
             if (!file) return;
+
+            // Validate file type
+            const allowedTypes = ['.zip', '.tar', '.tar.gz', '.tgz'];
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            if (!allowedTypes.includes(fileExtension)) {
+                errorAlert.textContent = 'Invalid file type. Please upload a ZIP or TAR file.';
+                errorAlert.classList.remove('d-none');
+                return;
+            }
 
             const formData = new FormData();
             formData.append('file', file);
             formData.append('host', document.querySelector('input[name="host"]:checked').value);
             formData.append('port', document.getElementById('port').value);
             formData.append('format', document.querySelector('input[name="format"]:checked').value);
+            formData.append('optimizeImages', document.getElementById('optimizeImages').checked);
+            formData.append('multiStage', document.getElementById('multiStage').checked);
+            formData.append('securityScan', document.getElementById('securityScan').checked);
             
             // Show loading state
             loading.classList.add('active');
@@ -249,11 +366,6 @@
                 // Reset form and hide loading
                 uploadForm.reset();
                 loading.classList.remove('active');
-                
-                // Refresh page after a short delay
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
             })
             .catch(error => {
                 errorAlert.textContent = error.message;

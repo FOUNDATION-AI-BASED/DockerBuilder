@@ -1,0 +1,9 @@
+services:
+  app:
+    build: .
+    environment: {}
+    ports:
+    - 84:84
+    volumes:
+    - ./:/app
+version: '3.8'

@@ -2,6 +2,8 @@ import os
 import json
 import yaml
 import magic
+import re
+import chardet
 from typing import Dict, List, Any
 
 class ProjectAnalyzer:
@@ -9,21 +11,136 @@ class ProjectAnalyzer:
         self.project_path = project_path
         self.mime = magic.Magic(mime=True)
         
-    def analyze(self) -> Dict[str, Any]:
-        """Analyze the project and return its characteristics."""
-        project_type = self._detect_project_type()
-        dependencies = self._analyze_dependencies()
-        entry_points = self._find_entry_points()
-        ports = self._detect_ports()
+    def detect_encoding(self, file_path: str) -> str:
+        """Detect the encoding of a file."""
+        try:
+            with open(file_path, 'rb') as f:
+                raw_data = f.read()
+                result = chardet.detect(raw_data)
+                return result['encoding'] or 'utf-8'
+        except Exception:
+            return 'utf-8'
+    
+    def is_binary_file(self, file_path: str) -> bool:
+        """Check if a file is binary."""
+        try:
+            file_type = self.mime.from_file(file_path)
+            return not file_type.startswith('text/')
+        except Exception:
+            return True
+    
+    def read_file_content(self, file_path: str) -> str:
+        """Read file content with proper encoding detection."""
+        if self.is_binary_file(file_path):
+            return ""
         
-        return {
-            'project_type': project_type,
-            'dependencies': dependencies,
-            'entry_points': entry_points,
-            'ports': ports,
-            'environment': self._analyze_environment(),
-            'build_requirements': self._analyze_build_requirements()
+        try:
+            encoding = self.detect_encoding(file_path)
+            with open(file_path, 'r', encoding=encoding, errors='replace') as f:
+                return f.read()
+        except Exception:
+            return ""
+    
+    def detect_language(self, file_path: str) -> str:
+        """Detect the programming language of a file."""
+        ext = os.path.splitext(file_path)[1].lower()
+        content = self.read_file_content(file_path)
+        
+        # Language detection based on file extension and content
+        if ext == '.py' or 'import ' in content or 'def ' in content:
+            return 'python'
+        elif ext == '.js' or 'function ' in content or 'const ' in content:
+            return 'javascript'
+        elif ext == '.java' or 'public class' in content:
+            return 'java'
+        elif ext == '.php' or '<?php' in content:
+            return 'php'
+        elif ext == '.rb' or 'def ' in content and 'end' in content:
+            return 'ruby'
+        elif ext == '.go' or 'package ' in content:
+            return 'go'
+        elif ext == '.rs' or 'fn ' in content:
+            return 'rust'
+        elif ext == '.ts' or 'interface ' in content:
+            return 'typescript'
+        else:
+            return 'unknown'
+    
+    def find_dependencies(self, file_path: str, language: str) -> List[str]:
+        """Find dependencies based on the programming language."""
+        content = self.read_file_content(file_path)
+        dependencies = []
+        
+        if language == 'python':
+            # Look for requirements.txt or setup.py
+            if os.path.basename(file_path) == 'requirements.txt':
+                dependencies = [line.strip() for line in content.splitlines() if line.strip() and not line.startswith('#')]
+            elif os.path.basename(file_path) == 'setup.py':
+                # Basic setup.py parsing
+                for line in content.splitlines():
+                    if 'install_requires=' in line:
+                        deps = re.findall(r'["\']([^"\']+)["\']', line)
+                        dependencies.extend(deps)
+        
+        elif language == 'javascript':
+            # Look for package.json
+            if os.path.basename(file_path) == 'package.json':
+                try:
+                    import json
+                    data = json.loads(content)
+                    if 'dependencies' in data:
+                        dependencies.extend(data['dependencies'].keys())
+                    if 'devDependencies' in data:
+                        dependencies.extend(data['devDependencies'].keys())
+                except:
+                    pass
+        
+        return dependencies
+    
+    def analyze(self) -> Dict[str, Any]:
+        """Analyze the project and return the results."""
+        results = {
+            'language': 'unknown',
+            'dependencies': [],
+            'files': [],
+            'structure': {}
         }
+        
+        # Walk through the project directory
+        for root, dirs, files in os.walk(self.project_path):
+            rel_path = os.path.relpath(root, self.project_path)
+            
+            # Skip hidden directories
+            dirs[:] = [d for d in dirs if not d.startswith('.')]
+            
+            for file in files:
+                # Skip hidden files
+                if file.startswith('.'):
+                    continue
+                
+                file_path = os.path.join(root, file)
+                rel_file_path = os.path.join(rel_path, file)
+                
+                # Detect language
+                language = self.detect_language(file_path)
+                if language != 'unknown' and results['language'] == 'unknown':
+                    results['language'] = language
+                
+                # Find dependencies
+                deps = self.find_dependencies(file_path, language)
+                results['dependencies'].extend(deps)
+                
+                # Add file to structure
+                results['files'].append({
+                    'path': rel_file_path,
+                    'language': language,
+                    'dependencies': deps
+                })
+        
+        # Remove duplicate dependencies
+        results['dependencies'] = list(set(results['dependencies']))
+        
+        return results
     
     def _detect_project_type(self) -> str:
         """Detect the type of project based on its files."""
@@ -92,7 +209,6 @@ class ProjectAnalyzer:
             with open(pom_path) as f:
                 content = f.read()
                 # Simple regex-based dependency extraction
-                import re
                 deps = re.findall(r'<dependency>.*?<artifactId>(.*?)</artifactId>', content, re.DOTALL)
                 dependencies['runtime'].extend(deps)
     
@@ -126,7 +242,6 @@ class ProjectAnalyzer:
                     with open(file_path) as f:
                         content = f.read()
                         for pattern in port_patterns:
-                            import re
                             matches = re.findall(pattern, content)
                             ports.extend(int(match) for match in matches if match.isdigit())
         

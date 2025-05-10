@@ -22,3 +22,10 @@ coverage.xml
 *.log
 .pytest_cache
 .DS_Store
+dist
+build
+*.egg-info
+.idea
+.vscode
+*.swp
+*.swo

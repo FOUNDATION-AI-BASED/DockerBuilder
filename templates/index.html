@@ -13,86 +13,78 @@
             text-align: center;
             background: #f8f9fa;
             cursor: pointer;
-            transition: border-color 0.3s ease;
+            transition: all 0.3s ease;
         }
-        .drop-zone:hover {
-            border-color: #0d6efd;
-        }
-        .drop-zone.dragover {
+        .drop-zone:hover, .drop-zone.dragover {
             border-color: #0d6efd;
             background: #e9ecef;
         }
-        .spinner-container {
+        .loading {
             display: none;
-            text-align: center;
-            margin: 20px 0;
         }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #0d6efd;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .status-container {
-            display: none;
-            margin-top: 20px;
-        }
-        .progress {
-            height: 20px;
-            margin-top: 10px;
-        }
-        .progress-bar {
-            transition: width 0.3s ease;
+        .loading.active {
+            display: block;
         }
     </style>
 </head>
 <body>
     <div class="container py-5">
+        <h1 class="text-center mb-4">DockerBuilder</h1>
+        <h2 class="text-center mb-4">Smart Project Containerization</h2>
+        
         <div class="row justify-content-center">
             <div class="col-md-8">
-                <div class="text-center mb-4">
-                    <h1 class="display-4">DockerBuilder 🐳</h1>
-                    <p class="lead">Smart Project Containerization Assistant</p>
-                </div>
-
                 <div class="card">
                     <div class="card-body">
-                        <div id="drop-zone" class="drop-zone mb-3">
-                            <p class="mb-0">Drag and drop your project here or click to select</p>
-                            <input type="file" id="file-input" class="d-none" accept=".zip,.tar,.gz">
-                        </div>
-
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="radio" name="format" id="format-zip" value="zip" checked>
-                            <label class="form-check-label" for="format-zip">
-                                ZIP Format
-                            </label>
-                        </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="radio" name="format" id="format-tar" value="tar.gz">
-                            <label class="form-check-label" for="format-tar">
-                                TAR.GZ Format
-                            </label>
-                        </div>
-
-                        <div id="spinner-container" class="spinner-container">
-                            <div class="spinner"></div>
-                            <p class="mt-2" id="spinner-text">Analyzing project...</p>
-                        </div>
-
-                        <div id="status-container" class="status-container">
-                            <div class="alert" id="status"></div>
-                            <div class="progress">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        <form id="uploadForm">
+                            <div class="mb-3">
+                                <label for="outputName" class="form-label">Output File Name</label>
+                                <input type="text" class="form-control" id="outputName" placeholder="Enter output file name (without extension)">
                             </div>
-                        </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Host Binding</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="host" id="hostAll" value="0.0.0.0" checked>
+                                    <label class="form-check-label" for="hostAll">All Interfaces (0.0.0.0)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="host" id="hostLocal" value="localhost">
+                                    <label class="form-check-label" for="hostLocal">Localhost Only</label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="port" class="form-label">Port Number</label>
+                                <input type="number" class="form-control" id="port" value="5000" min="1" max="65535">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Output Format</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="format" id="formatZip" value="zip" checked>
+                                    <label class="form-check-label" for="formatZip">ZIP</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="format" id="formatTar" value="tar.gz">
+                                    <label class="form-check-label" for="formatTar">TAR.GZ</label>
+                                </div>
+                            </div>
+                            
+                            <div class="drop-zone mb-3" id="dropZone">
+                                <p class="mb-0">Drag and drop your project here or click to select</p>
+                                <input type="file" id="fileInput" class="d-none" accept=".zip,.tar,.tar.gz,.tgz">
+                            </div>
+                            
+                            <div class="loading mb-3">
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                                </div>
+                                <p class="text-center mt-2">Analyzing project and generating Docker configurations...</p>
+                            </div>
+                            
+                            <div class="alert alert-danger d-none" id="errorAlert"></div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -100,24 +92,20 @@
     </div>
 
     <script>
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const status = document.getElementById('status');
-        const statusContainer = document.getElementById('status-container');
-        const spinnerContainer = document.getElementById('spinner-container');
-        const spinnerText = document.getElementById('spinner-text');
-        const progressBar = document.querySelector('.progress-bar');
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const loading = document.querySelector('.loading');
+        const errorAlert = document.getElementById('errorAlert');
+        const uploadForm = document.getElementById('uploadForm');
+        const outputName = document.getElementById('outputName');
 
-        // Handle drag and drop events
+        // Prevent default drag behaviors
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
         });
 
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
+        // Highlight drop zone when dragging over it
         ['dragenter', 'dragover'].forEach(eventName => {
             dropZone.addEventListener(eventName, highlight, false);
         });
@@ -125,6 +113,16 @@
         ['dragleave', 'drop'].forEach(eventName => {
             dropZone.addEventListener(eventName, unhighlight, false);
         });
+
+        // Handle dropped files
+        dropZone.addEventListener('drop', handleDrop, false);
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFiles);
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
 
         function highlight(e) {
             dropZone.classList.add('dragover');
@@ -134,85 +132,63 @@
             dropZone.classList.remove('dragover');
         }
 
-        // Handle file drop
-        dropZone.addEventListener('drop', handleDrop, false);
-        dropZone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', handleFileSelect);
-
         function handleDrop(e) {
             const dt = e.dataTransfer;
             const files = dt.files;
-            handleFiles(files);
+            handleFiles({ target: { files: files } });
         }
 
-        function handleFileSelect(e) {
-            const files = e.target.files;
-            handleFiles(files);
-        }
+        function handleFiles(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
-        function handleFiles(files) {
-            if (files.length === 0) return;
-            
-            const file = files[0];
-            const format = document.querySelector('input[name="format"]:checked').value;
-            
-            uploadFile(file, format);
-        }
-
-        function updateProgress(percent) {
-            progressBar.style.width = `${percent}%`;
-        }
-
-        function showSpinner(message) {
-            spinnerText.textContent = message;
-            spinnerContainer.style.display = 'block';
-            statusContainer.style.display = 'none';
-        }
-
-        function showStatus(message, type = 'info') {
-            spinnerContainer.style.display = 'none';
-            statusContainer.style.display = 'block';
-            status.className = `alert alert-${type}`;
-            status.textContent = message;
-        }
-
-        function uploadFile(file, format) {
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('format', format);
-
-            showSpinner('Analyzing project...');
-            updateProgress(20);
-
+            formData.append('host', document.querySelector('input[name="host"]:checked').value);
+            formData.append('port', document.getElementById('port').value);
+            formData.append('format', document.querySelector('input[name="format"]:checked').value);
+            
+            // Show loading state
+            loading.classList.add('active');
+            errorAlert.classList.add('d-none');
+            
             fetch('/api/analyze', {
                 method: 'POST',
                 body: formData
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Upload failed');
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'An error occurred');
+                    });
                 }
-                updateProgress(60);
-                showSpinner('Generating Docker configurations...');
                 return response.blob();
             })
             .then(blob => {
-                updateProgress(90);
+                // Create download link
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
+                const fileName = outputName.value ? `${outputName.value}.${document.querySelector('input[name="format"]:checked').value}` : 'dockerized_project.zip';
                 a.href = url;
-                a.download = `docker_configs.${format}`;
+                a.download = fileName;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
-                a.remove();
-
-                updateProgress(100);
-                showStatus('Docker configurations generated successfully!', 'success');
+                document.body.removeChild(a);
+                
+                // Reset form and hide loading
+                uploadForm.reset();
+                loading.classList.remove('active');
+                
+                // Refresh page after a short delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
             })
             .catch(error => {
-                showStatus('Error: ' + error.message, 'danger');
-                updateProgress(0);
+                errorAlert.textContent = error.message;
+                errorAlert.classList.remove('d-none');
+                loading.classList.remove('active');
             });
         }
     </script>

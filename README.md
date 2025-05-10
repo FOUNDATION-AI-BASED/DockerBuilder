@@ -20,15 +20,6 @@ This project is developed and maintained by [FOUNDATION-AI-BASED](https://github
 
 ## 🧪 Tested Project Types
 
-### Python Projects
-- ✅ Django (tested with Django 3.2, 4.0)
-- ✅ Flask (tested with Flask 2.0, 2.1)
-- ✅ FastAPI (tested with FastAPI 0.68, 0.70)
-
-### Node.js Projects
-- ✅ Express.js (tested with Express 4.17, 4.18)
-- ✅ React (tested with Create React App)
-- ✅ Next.js (tested with Next.js 12, 13)
 
 ### Example Tested Projects
 - Simple Django blog application
@@ -45,6 +36,10 @@ This project is developed and maintained by [FOUNDATION-AI-BASED](https://github
 - ❌ Sanic
 - ❌ Complex Django applications with custom middleware
 - ❌ Projects with multiple Python versions
+- ❌ Django
+- ❌ Flask
+- ❌ FastAPI
+
 
 ### Node.js
 - ❌ NestJS
@@ -52,6 +47,9 @@ This project is developed and maintained by [FOUNDATION-AI-BASED](https://github
 - ❌ Vue.js with custom configurations
 - ❌ Complex monorepo structures
 - ❌ Projects with multiple Node.js versions
+- ❌ Express.js
+- ❌ React
+- ❌ Next.js
 
 ### Other Languages
 - ❌ Java Spring Boot

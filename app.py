@@ -86,6 +86,31 @@ def create_dockerized_project(project_dir, docker_configs, output_path, format):
             for config_file in docker_configs:
                 tarf.add(config_file, os.path.basename(config_file))
 
+def remove_macos_folders(directory):
+    """Remove _MACOS folders from the extracted project."""
+    for root, dirs, _ in os.walk(directory):
+        if '_MACOS' in dirs:
+            macos_path = os.path.join(root, '_MACOS')
+            shutil.rmtree(macos_path)
+            dirs.remove('_MACOS')
+
+def find_project_root(directory):
+    """Find the actual project root directory by looking for key files."""
+    key_files = ['package.json', 'requirements.txt', 'pom.xml', 'Gemfile', 'composer.json', 'go.mod', 'Cargo.toml']
+    
+    # First check the current directory
+    if any(os.path.exists(os.path.join(directory, f)) for f in key_files):
+        return directory
+    
+    # Then check immediate subdirectories
+    for item in os.listdir(directory):
+        item_path = os.path.join(directory, item)
+        if os.path.isdir(item_path):
+            if any(os.path.exists(os.path.join(item_path, f)) for f in key_files):
+                return item_path
+    
+    return directory
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -121,8 +146,14 @@ def analyze_project():
         # Extract the archive
         extract_archive(filepath, extract_path)
         
+        # Remove _MACOS folders
+        remove_macos_folders(extract_path)
+        
+        # Find the actual project root
+        project_root = find_project_root(extract_path)
+        
         # Analyze the project with encoding detection
-        analyzer = ProjectAnalyzer(extract_path)
+        analyzer = ProjectAnalyzer(project_root)
         analysis_result = analyzer.analyze()
         
         # Generate Docker configurations with custom host and port
@@ -133,7 +164,7 @@ def analyze_project():
         output_filename = f"dockerized_project.{output_format}"
         output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
         
-        create_dockerized_project(extract_path, docker_configs, output_path, output_format)
+        create_dockerized_project(project_root, docker_configs, output_path, output_format)
         
         return send_file(output_path, as_attachment=True)
     

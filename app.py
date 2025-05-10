@@ -133,6 +133,14 @@ def analyze_project():
         port = request.form.get('port', '5000')
         output_format = request.form.get('format', 'zip')
         
+        # Validate port number
+        try:
+            port_num = int(port)
+            if not (1 <= port_num <= 65535):
+                return jsonify({'error': 'Port number must be between 1 and 65535'}), 400
+        except ValueError:
+            return jsonify({'error': 'Invalid port number'}), 400
+        
         # Save the uploaded file
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -155,6 +163,9 @@ def analyze_project():
         # Analyze the project with encoding detection
         analyzer = ProjectAnalyzer(project_root)
         analysis_result = analyzer.analyze()
+        
+        # Update port in analysis result
+        analysis_result['port'] = port
         
         # Generate Docker configurations with custom host and port
         generator = DockerGenerator(analysis_result)
@@ -190,4 +201,4 @@ def health_check():
     return jsonify({'status': 'healthy'})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False) 
+    app.run(host='0.0.0.0', port=5000, debug=False)
